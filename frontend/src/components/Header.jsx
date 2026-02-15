@@ -5,21 +5,21 @@ function Header() {
   const [count, setCount] = useState(0);
 
   return (
-    <header id="header">
+    <header className="fixed flex items-center justify-between w-full p-4 mt-5">
       <a href="/" id="logo">
-        <img src="./logo.svg" alt="Logo" className="w-50 h-50" />
+        <img src="/logoSmall.svg" alt="Logo" />
       </a>
 
       <nav id="menu">
-        <Link to="/news" className="menuItem">
+        {/* <Link to="/news" className="menuItem">
           News
+        </Link> */}
+        <Link to="/activities" className="menuItem">
+          Activities
         </Link>
-        <Link to="/activites" className="menuItem">
-          Activites
-        </Link>
-        <Link to="/art" className="menuItem">
+        {/* <Link to="/art" className="menuItem">
           Art
-        </Link>
+        </Link> */}
       </nav>
     </header>
   );
