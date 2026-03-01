@@ -1,6 +1,8 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 function LandingPage() {
+  const navigate = useNavigate();
   return (
     <div className="flex items-center justify-center h-dvh overflow-hidden">
       <div className="flex flex-col items-center">
@@ -16,7 +18,10 @@ function LandingPage() {
             alt="enter button"
             className="absolute top-1.5"
           />
-          <p className="button absolute top-7 left-1/2 transform -translate-x-1/2">
+          <p
+            className="button absolute top-7 left-1/2 transform -translate-x-1/2"
+            onClick={() => navigate("/activities")}
+          >
             Enter
           </p>
         </div>

@@ -19,7 +19,7 @@ function App() {
         <Route path="/activities" element={<ActivitiesPage />} />
         <Route path="/activities/:id" element={<DetailedActivity />} />
         <Route path="/inventory" element={<InventoryPage />} />
-        <Route path="/news-paper" element={<NewsPaper />} />
+        <Route path="/news-paper/:id" element={<NewsPaper />} />
       </Routes>
     </div>
   );
