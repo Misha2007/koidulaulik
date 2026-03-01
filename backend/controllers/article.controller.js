@@ -42,3 +42,12 @@ exports.getLatestArticle = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+exports.createArticle = async (req, res) => {
+  try {
+    const article = await Article.create(req.body);
+    res.status(201).json(article);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+};
