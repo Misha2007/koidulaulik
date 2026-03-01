@@ -5,10 +5,12 @@ exports.getAllArticles = async (req, res) => {
     let { sortBy, order } = req.query;
 
     if (!sortBy) sortBy = "createdAt";
-    if (!order || !["ASC", "DESC"].includes(order.toUpperCase())) order = "DESC";
+    if (!order || !["ASC", "DESC"].includes(order.toUpperCase()))
+      order = "DESC";
 
     const articles = await Article.findAll({
       order: [[sortBy, order.toUpperCase()]],
+      limit: 4,
     });
 
     res.json(articles);
