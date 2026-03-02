@@ -23,7 +23,9 @@ exports.createInventory = async (req, res) => {
     });
 
     if (articles.length < 4) {
-      return res.status(400).json({ error: "Not enough articles to create inventory" });
+      return res
+        .status(400)
+        .json({ error: "Not enough articles to create inventory" });
     }
 
     const item = await Item.create({
@@ -48,6 +50,7 @@ exports.createInventory = async (req, res) => {
 exports.getInventoryByUser = async (req, res) => {
   try {
     const { userId } = req.params;
+    console.log(userId);
 
     const inventory = await Inventory.findAll({
       where: { userId },

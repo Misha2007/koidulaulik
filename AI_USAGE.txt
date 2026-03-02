@@ -1033,3 +1033,152 @@ Tesseract.js receives the correct image bytes and can OCR normally.
 If you want, I can send a ready-to-use full Activity.jsx that integrates this proxy, handles OCR, and logs text safely without crashes.
 
 Do you want me to do that?
+
+
+
+import jwt from "jsonwebtoken";
+import db from "../util/db.js";
+import authConfig from "../config/auth.config.js";
+import Clients from "../models/clients.js";
+
+export const verifyToken = async (req, res, next) => {
+  const headerToken =
+    req.headers["x-access-token"] || req.headers["authorization"];
+  console.log("headerToken", headerToken);
+
+  const token = headerToken.replace("Bearer ", "");
+  console.log("token", token);
+
+  if (!token) {
+    return res.status(403).json({ message: "No token provided!" });
+  }
+
+  try {
+    const decoded = jwt.verify(token.replace("Bearer ", ""), authConfig.secret);
+    console.log("Decoded JWT:", decoded);
+
+    req.user = req.user || {};
+    req.user.clientId = decoded.clientId;
+
+    const user = await Clients.findByPk(req.user.clientId);
+    console.log("Found user:", user);
+
+    if (!user) {
+      return res.status(401).json({ message: "Unauthorized! User not found" });
+    }
+
+    req.user = user;
+    console.log("[Server]: User added to req object:", req.user);
+
+    next();
+  } catch (err) {
+    if (err.name === "TokenExpiredError") {
+      return res
+        .status(401)
+        .json({ message: "Token expired. Please log in again." });
+    }
+    return res
+      .status(401)
+      .json({ message: "Unauthorized!", error: err.message });
+  }
+};
+
+write this with require()
+
+Here is your middleware rewritten using CommonJS (require) instead of ES modules (import).
+
+const jwt = require("jsonwebtoken");
+const db = require("../util/db.js");
+const authConfig = require("../config/auth.config.js");
+const Clients = require("../models/clients.js");
+
+const verifyToken = async (req, res, next) => {
+  const headerToken =
+    req.headers["x-access-token"] || req.headers["authorization"];
+
+  console.log("headerToken", headerToken);
+
+  if (!headerToken) {
+    return res.status(403).json({ message: "No token provided!" });
+  }
+
+  // Remove "Bearer " if present
+  const token = headerToken.startsWith("Bearer ")
+    ? headerToken.slice(7)
+    : headerToken;
+
+  console.log("token", token);
+
+  try {
+    const decoded = jwt.verify(token, authConfig.secret);
+    console.log("Decoded JWT:", decoded);
+
+    req.user = req.user || {};
+    req.user.clientId = decoded.clientId;
+
+    const user = await Clients.findByPk(req.user.clientId);
+    console.log("Found user:", user);
+
+    if (!user) {
+      return res.status(401).json({ message: "Unauthorized! User not found" });
+    }
+
+    req.user = user;
+    console.log("[Server]: User added to req object:", req.user);
+
+    next();
+  } catch (err) {
+    if (err.name === "TokenExpiredError") {
+      return res
+        .status(401)
+        .json({ message: "Token expired. Please log in again." });
+    }
+
+    return res
+      .status(401)
+      .json({ message: "Unauthorized!", error: err.message });
+  }
+};
+
+module.exports = {
+  verifyToken,
+};
+🔎 Important
+
+Make sure:
+
+Your package.json does NOT contain:
+
+"type": "module"
+
+Otherwise require() won’t work.
+
+All other files also use require() instead of import.
+
+If you want, I can also show:
+
+how to convert your whole project from ES modules → CommonJS
+
+or how to fix "require is not defined" errors
+
+or how to properly structure JWT middleware in production
+
+Just tell me 👍
+
+
+write a readme file for a web app (frontend is react (vite) styles with tailwind and backend is nodejs and mysql db)
+
+the app is game style culture app where user can find new events through activities board that are happening in Estonia and current news through news paper also app is live deployed on render (backend) netlify(frontend) and aiven (db) the name of the project is koidulaulik
+
+also user can sign in/up where is used bcrypt hashing method and with jwt and middlewares the app checks if user is logged in. also user has inventory where user can find news papers and other stuff that will be added later, also in the project is used tesseract to check if activity does have text in image and if does it will be put as image to board, its done to make board more realistic 
+also data is scrapped from https://www.err.ee/, https://rahvakultuur.ee/mis-toimub/, https://kultuuriaken.tartu.ee and https://culture.ee/en/blog/ (but this one is inactive so this one is no longer in use) 
+
+also in project is used sequelize to easier manage db and this app was created by two independent developers and this project can be used and improved by others (so its free to use and free to upgrade licences) or how to call it (we dont have licences rn but i can add it through github)
+
+Vastus
+https://chatgpt.com/s/t_69a602b47d748191ba2672556991749e
+
+but also user need to have a db created otherwise it will no work
+
+Vastus:
+https://chatgpt.com/s/t_69a602c889dc8191983656514a3455c4

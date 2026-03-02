@@ -50,6 +50,32 @@ exports.createUser = async (req, res) => {
               .status(500)
               .json({ message: "Error creating user", error: err.message });
           });
+
+        User.create({
+          username: username,
+          email: email,
+          password: hash,
+        })
+          .then((newUser) => {
+            const token = jwt.sign({ userId: newUser.id }, authConfig.secret, {
+              expiresIn: "2h",
+            });
+
+            res.status(201).json({
+              message: "Created new user",
+              newUser: newUser,
+              accessToken: token,
+            });
+
+            console.log(
+              `[Server]: ${newUser.firstName} (${newUser.lastName}) signed up`,
+            );
+          })
+          .catch((err) => {
+            res
+              .status(500)
+              .json({ message: "Error creating user", error: err.message });
+          });
       });
     });
   } catch (err) {
@@ -80,13 +106,13 @@ exports.getUser = async (req, res) => {
         }
 
         const token = jwt.sign(
-          { clientId: newUser.clientId },
+          { userId: newUser.id },
           authConfig.secret,
 
           { expiresIn: "2h" },
         );
 
-        console.log("login user token", newUser.clientId);
+        console.log("login user token", newUser.id);
 
         if (result) {
           console.log(

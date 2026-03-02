@@ -6,6 +6,7 @@ function InventoryPage() {
   const columns = 6;
   const rows = 4;
   const totalSlots = columns * rows;
+  const token = localStorage.getItem("authToken");
 
   const [error, setError] = useState();
 
@@ -33,10 +34,11 @@ function InventoryPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch(`${VITE_API_URL}inventory/user/${1}`, {
+        const response = await fetch(`${VITE_API_URL}inventory/user`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
           },
         });
         const data = await response.json();
