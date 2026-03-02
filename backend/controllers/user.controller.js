@@ -1,4 +1,7 @@
 const User = require("../models/User");
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+const authConfig = require("../config/auth.config.js");
 
 exports.createUser = async (req, res) => {
   try {

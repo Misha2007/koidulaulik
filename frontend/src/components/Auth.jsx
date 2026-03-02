@@ -1,12 +1,16 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Login from "./Login";
+import { useNavigate } from "react-router-dom";
+import Signup from "./SignUp";
 
 const { VITE_API_URL } = import.meta.env;
 
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
+  const [token, setToken] = useState(null);
 
   const [error, setError] = useState();
+  const navigate = useNavigate();
 
   const addUserHandler = (user) => {
     const addUser = async (user) => {
@@ -46,7 +50,7 @@ export default function Auth() {
   const loginUserHandler = (user) => {
     const getUser = async (user) => {
       try {
-        const response = await fetch(`${REACT_APP_API_URL}user/login`, {
+        const response = await fetch(`${VITE_API_URL}user/login`, {
           method: "POST",
           body: JSON.stringify(user),
           headers: {
@@ -100,47 +104,7 @@ export default function Auth() {
         {isLogin ? (
           <Login onLoginUser={loginUserHandler} />
         ) : (
-          <form className="space-y-4">
-            <div>
-              <label className="block text-brown-800 font-semibold mb-1">
-                Username
-              </label>
-              <input
-                type="text"
-                placeholder="Enter your username"
-                className="w-full px-4 py-2 rounded-lg border border-yellow-400 focus:outline-none focus:ring-2 focus:ring-yellow-300"
-              />
-            </div>
-
-            <div>
-              <label className="block text-brown-800 font-semibold mb-1">
-                Email
-              </label>
-              <input
-                type="email"
-                placeholder="Enter your email"
-                className="w-full px-4 py-2 rounded-lg border border-yellow-400 focus:outline-none focus:ring-2 focus:ring-yellow-300"
-              />
-            </div>
-
-            <div>
-              <label className="block text-brown-800 font-semibold mb-1">
-                Password
-              </label>
-              <input
-                type="password"
-                placeholder="Enter your password"
-                className="w-full px-4 py-2 rounded-lg border border-yellow-400 focus:outline-none focus:ring-2 focus:ring-yellow-300"
-              />
-            </div>
-
-            <button
-              type="submit"
-              className="w-full py-2 mt-4 rounded-lg bg-brown-800 text-white font-bold hover:bg-yellow-400 transition-colors"
-            >
-              Sign Up
-            </button>
-          </form>
+          <Signup onAddUser={addUserHandler} />
         )}
 
         <div className="mb-8 text-center text-brown-800">

@@ -5,7 +5,7 @@ import { IoMdArrowDropright } from "react-icons/io";
 
 const { VITE_API_URL } = import.meta.env;
 
-function Login() {
+function Login(props) {
   const emailInputRef = useRef();
   const passwordInputRef = useRef();
 
@@ -18,7 +18,7 @@ function Login() {
 
   const sumbitHandler = (event) => {
     const enteredEmail = emailInputRef.current.value;
-    const enteredPassword = passwordInputRef.current.value
+    const enteredPassword = passwordInputRef.current.value;
     event.preventDefault();
 
     if (enteredEmail.trim().length == 0 || enteredPassword.trim().length == 0) {
@@ -37,9 +37,9 @@ function Login() {
 
     saveUserDataHandler(expenseData);
   };
-  
+
   return (
-    <form className="space-y-4 p-8">
+    <form className="space-y-4 p-8" onSubmit={sumbitHandler}>
       <div>
         <label className="block text-[var(--color-darkbrown)] font-semibold mb-1">
           Email
