@@ -11,23 +11,20 @@ function Activity(props) {
       <h2
         className={`${props.isPinned ? "mt-7" : ""} text-2xl font-semibold mb-2 text-center text-black font-[condiment] font-regular`}
       >
-        Startup Day
+        {props.activity.name}
       </h2>
-      <img
-        src="https://thumbs.dreamstime.com/b/beautiful-rain-forest-ang-ka-nature-trail-doi-inthanon-national-park-thailand-36703721.jpg"
-        alt=""
-      />
+      <img src={props.activity.img} alt="" />
       <br />
 
       <p className="text-black text-wrap break-words font-[condiment]">
-        The most startup-minded business festival is back! Join us on 27-29
-        January in Tartu.
+        {props.activity.description}
       </p>
       <br />
-      <p className="text-black text-wrap break-words font-[condiment]">
-        Fee: 20€ (includes access to all sessions, workshops, and networking
-        events)
-      </p>
+      {props.activity.price && (
+        <p className="text-black text-wrap break-words font-[condiment]">
+          Fee: {props.activity.price}
+        </p>
+      )}
     </div>
   );
 }
