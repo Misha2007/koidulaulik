@@ -10,7 +10,6 @@ exports.getAllEvents = async (req, res) => {
 
     const events = await Event.findAll({
       order: [[sortBy, order.toUpperCase()]],
-      limit: 4,
     });
 
     res.json(events);
