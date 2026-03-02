@@ -47,8 +47,9 @@ for div in soup.find_all('div', class_='col'):
         if image_div and image_div.get("style"):
             style = image_div["style"]
             match = re.search(r"url\(['\"]?(.*?)['\"]?\)", style)
+            
             if match:
-                image_url = match.group(1)
+                img_url = match.group(1)
 
         # Coordinates
         scripts = event_soup.find_all("script")
@@ -167,7 +168,7 @@ for div in soup.find_all('div', class_='col'):
             "latitude": latitude,
             "longitude": longitude,
             "price": price,
-            "image_url": image_url
+            "img_url": img_url
         }
 
         try:
