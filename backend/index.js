@@ -3,6 +3,7 @@ const cors = require("cors");
 const sequelize = require("./config/db");
 const articleRoutes = require("./routes/article.routes");
 const eventRoutes = require("./routes/event.routes");
+const inventoryRoutes = require("./routes/inventory.routes");
 
 const app = express();
 app.use(cors());
@@ -18,6 +19,7 @@ sequelize
 
 app.use("/articles", articleRoutes);
 app.use("/events", eventRoutes);
+app.use("/inventory", inventoryRoutes);
 
 app.get('/proxy-image', async (req, res) => {
   const url = req.query.url;
