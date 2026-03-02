@@ -6,17 +6,17 @@ const { VITE_API_URL } = import.meta.env;
 function Activity(props) {
   const [isImageText, setIsImageText] = useState(false);
 
-  const random = Math.floor(Math.random() * 2) + 1;
+  const full_img_url =
+    props.activity.img_url &&
+    "https://kultuuriaken.tartu.ee/" + props.activity.img_url;
 
   useEffect(() => {
     const textImageChecker = async () => {
-      console.log(props.activity.img_url);
-      if (props.activity.img_url) {
+      console.log(full_img_url);
+      if (full_img_url) {
         const worker = await createWorker("eng");
-        const proxyUrl = `${VITE_API_URL}proxy-image?url=${encodeURIComponent(props.activity.img_url)}`;
+        const proxyUrl = `${VITE_API_URL}proxy-image?url=${encodeURIComponent(full_img_url)}`;
         const ret = await worker.recognize(proxyUrl);
-        console.log("aaaa", ret.data.text.length);
-        console.log("bbbb", random === 1 && ret.data.text.length > 10);
         setIsImageText(ret.data.text.length > 40);
         await worker.terminate();
       }
@@ -26,10 +26,10 @@ function Activity(props) {
 
   return (
     <>
-      {random === 2 && isImageText ? (
-        <img src={props.activity.img_url} alt="placeholder" />
+      {isImageText ? (
+        <img src={full_img_url} alt="placeholder" className="mb-6" />
       ) : (
-        <div className="shadow-md p-6 bg-activity w-80 relative">
+        <div className="shadow-md p-6 bg-activity w-80 relative mb-6">
           {props.isPinned && (
             <div className="w-15 h-15 absolute -top-3 left-30">
               <img className="w-full h-full" src="/pin.svg" alt="Pinned" />
@@ -41,7 +41,7 @@ function Activity(props) {
             {props.activity.name}
           </h2>
           <img
-            src={props.activity.img_url}
+            src={full_img_url}
             alt={props.activity.name}
             className={"mb-4 mt-2"}
           />

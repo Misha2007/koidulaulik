@@ -7,6 +7,7 @@ import { Route, Routes } from "react-router-dom";
 import DetailedActivity from "./components/DetailedActivity";
 import InventoryPage from "./components/InventoryPage";
 import NewsPaper from "./components/NewsPaper";
+import Auth from "./components/Auth";
 
 function App() {
   const [count, setCount] = useState(0);
@@ -20,6 +21,7 @@ function App() {
         <Route path="/activities/:id" element={<DetailedActivity />} />
         <Route path="/inventory" element={<InventoryPage />} />
         <Route path="/news-paper/:id" element={<NewsPaper />} />
+        <Route path="/auth" element={<Auth />} />
       </Routes>
     </div>
   );
