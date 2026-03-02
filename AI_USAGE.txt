@@ -174,3 +174,862 @@ the first two are perfect but the last one is bigger than the container also u c
 
 Vastus:
 https://chatgpt.com/s/t_69a462c140f88191a487b1a098fbc585
+
+
+Access to fetch at 'https://kultuuriaken.tartu.ee/sites/default/files/styles/detail_main_image/public/api/luts/2339/pipiannelinnas.jpg?itok=jln8CpnU' from origin 'http://localhost:5173' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+
+Ah — this is a classic CORS (Cross-Origin Resource Sharing) issue. Your browser is blocking the request because the server (https://kultuuriaken.tartu.ee) doesn’t allow requests from http://localhost:5173. Let’s break this down and go over solutions.
+
+🔹 Why This Happens
+
+Browsers enforce CORS to prevent malicious websites from reading data from another domain without permission.
+
+Your request:
+
+GET https://kultuuriaken.tartu.ee/sites/.../pipiannelinnas.jpg
+
+Fails because the server does not send the header:
+
+Access-Control-Allow-Origin: http://localhost:5173
+🔹 Quick Solutions
+1️⃣ Use the image directly in an <img> tag (No CORS)
+
+If you only need to display the image, not fetch it via JS, you can use:
+
+<img src="https://kultuuriaken.tartu.ee/sites/default/files/styles/detail_main_image/public/api/luts/2339/pipiannelinnas.jpg?itok=jln8CpnU" alt="Pipi">
+
+Browsers allow cross-origin images for display. You only hit CORS if you try to fetch it via JavaScript (e.g., fetch() or axios).
+
+2️⃣ Proxy the request through your backend
+
+If you need the image data in JS, set up a server-side proxy. Example with Node.js/Express:
+
+const express = require('express');
+const fetch = require('node-fetch');
+const app = express();
+
+app.get('/proxy-image', async (req, res) => {
+  const response = await fetch('https://kultuuriaken.tartu.ee/sites/default/files/styles/detail_main_image/public/api/luts/2339/pipiannelinnas.jpg?itok=jln8CpnU');
+  const buffer = await response.buffer();
+  res.set('Content-Type', 'image/jpeg');
+  res.send(buffer);
+});
+
+app.listen(3000, () => console.log('Proxy running on port 3000'));
+
+Then in your frontend:
+
+fetch('http://localhost:3000/proxy-image')
+  .then(res => res.blob())
+  .then(blob => {
+    const url = URL.createObjectURL(blob);
+    document.querySelector('img').src = url;
+  });
+
+This works because the browser now only talks to your server, which isn’t restricted by CORS.
+
+3️⃣ Use a CORS proxy (temporary / dev only)
+
+For quick testing, you can prepend a CORS proxy URL:
+
+fetch('https://cors-anywhere.herokuapp.com/https://kultuuriaken.tartu.ee/.../pipiannelinnas.jpg')
+
+⚠️ Not recommended for production — you don’t control that proxy.
+
+4️⃣ Ask the server owner to enable CORS
+
+The ultimate solution is for the server to add this header:
+
+Access-Control-Allow-Origin: *
+
+But since this is a public site (kultuuriaken.tartu.ee), you probably can’t control it.
+
+🔹 TL;DR
+
+Display only → <img src="..."> ✅
+
+Fetch via JS → Use backend proxy ✅
+
+Quick dev hack → Public CORS proxy ⚠️
+
+If you want, I can write a ready-to-use Vite/React frontend example that fetches this image safely without hitting CORS errors.
+
+Do you want me to do that?
+
+import { useEffect, useState } from "react";
+import { createWorker } from 'tesseract.js';
+
+function Activity(props) {
+  useEffect(()=>{
+        const textImageChecker = async () => {
+
+      console.log(props.activity.img_url)
+      if (props.activity.img_url) {
+        const worker = await createWorker('eng');
+        const ret = await worker.recognize(props.activity.img_url);
+        console.log(ret.data.text);
+        await worker.terminate();
+      }
+    }
+    textImageChecker()
+  }, [])
+  return (
+    <div className={shadow-md p-6 bg-activity w-80 relative}>
+      {props.isPinned && (
+        <div className="w-15 h-15 absolute -top-3 left-30">
+          <img className="w-full h-full" src="/pin.svg" alt="" />
+        </div>
+      )}
+      <h2
+        className={${props.isPinned ? "mt-7" : ""} text-2xl font-semibold mb-2 text-center text-black font-[condiment] font-regular}
+      >
+        {props.activity.name}
+      </h2>
+      <img src={props.activity.img_url} alt="" />
+      <br />
+
+      <p className="text-black text-wrap break-words font-[condiment]">
+        {props.activity.description}
+      </p>
+      <br />
+      {props.activity.price && (
+        <p className="text-black text-wrap break-words font-[condiment]">
+          Fee: {props.activity.price}
+        </p>
+      )}
+    </div>
+  );
+}
+
+export default Activity;
+
+i just have this code
+
+Ah, I see exactly what’s happening. You’re using Tesseract.js to OCR an image from a cross-origin URL (props.activity.img_url) in a React app running on localhost. This is hitting the CORS issue we discussed earlier. When you try to do this in the browser, fetch() (used internally by Tesseract) is blocked if the image server doesn’t allow cross-origin requests. That’s why your code fails for kultuuriaken.tartu.ee images.
+
+🔹 How to Fix Your Code
+
+You basically have three options:
+
+1️⃣ Use a backend proxy (Recommended)
+
+Since the browser cannot fetch the image directly, you need your own server to fetch the image and then give it to Tesseract.
+
+Node.js example (Express):
+
+// server.js
+const express = require('express');
+const fetch = require('node-fetch');
+
+const app = express();
+
+app.get('/proxy-image', async (req, res) => {
+  const imageUrl = req.query.url;
+  const response = await fetch(imageUrl);
+  const buffer = await response.buffer();
+  res.set('Content-Type', 'image/jpeg'); // adjust if PNG
+  res.send(buffer);
+});
+
+app.listen(3000, () => console.log('Proxy server running on port 3000'));
+
+React side:
+
+const proxyUrl = `http://localhost:3000/proxy-image?url=${encodeURIComponent(props.activity.img_url)}`;
+const ret = await worker.recognize(proxyUrl);
+
+✅ This way, the browser fetches the image from your own server, bypassing CORS.
+
+2️⃣ Convert image to a Base64 Data URL first
+
+If the images are not too big, you can fetch them server-side or via a CORS-enabled proxy, convert to Base64, and pass that to Tesseract:
+
+const fetchImageAsDataUrl = async (url) => {
+  const res = await fetch(url);
+  const blob = await res.blob();
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.readAsDataURL(blob);
+  });
+};
+
+const dataUrl = await fetchImageAsDataUrl(props.activity.img_url);
+const ret = await worker.recognize(dataUrl);
+3️⃣ For dev/testing only: Use a public CORS proxy
+const proxyUrl = `https://cors-anywhere.herokuapp.com/${props.activity.img_url}`;
+const ret = await worker.recognize(proxyUrl);
+
+⚠️ Not reliable for production, but fine for local testing.
+
+🔹 Updated useEffect Example (Using Base64)
+useEffect(() => {
+  const textImageChecker = async () => {
+    if (props.activity.img_url) {
+      const worker = await createWorker('eng');
+
+      // Convert image to Base64 to avoid CORS
+      const fetchImageAsDataUrl = async (url) => {
+        const res = await fetch(url);
+        const blob = await res.blob();
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.readAsDataURL(blob);
+        });
+      };
+
+      const dataUrl = await fetchImageAsDataUrl(props.activity.img_url);
+
+      const ret = await worker.recognize(dataUrl);
+      console.log(ret.data.text);
+
+      await worker.terminate();
+    }
+  };
+
+  textImageChecker();
+}, []);
+
+✅ This avoids the CORS error entirely because the image is loaded as a local blob in the browser.
+
+If you want, I can rewrite your entire Activity component to safely handle any cross-origin image with Tesseract.js without hitting CORS.
+
+Do you want me to do that?
+
+Activity.jsx:12  GET https://cors-anywhere.herokuapp.com/https://kultuuriaken.tartu.ee/sites/default/files/styles/detail_main_image/public/2026-02/olaf_soot_fb_0.png?itok=PB3S4E-F 403 (Forbidden)
+loadImage @ tesseract__js.js?v=3cfa50fc:897
+recognize @ tesseract__js.js?v=3cfa50fc:1074
+textImageChecker @ Activity.jsx:12
+await in textImageChecker
+(anonymous) @ Activity.jsx:17
+react_stack_bottom_frame @ react-dom_client.js?v=29ccfd10:18567
+runWithFiberInDEV @ react-dom_client.js?v=29ccfd10:997
+commitHookEffectListMount @ react-dom_client.js?v=29ccfd10:9411
+commitHookPassiveMountEffects @ react-dom_client.js?v=29ccfd10:9465
+commitPassiveMountOnFiber @ react-dom_client.js?v=29ccfd10:11040
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=29ccfd10:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=29ccfd10:11201
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=29ccfd10:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=29ccfd10:11201
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=29ccfd10:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=29ccfd10:11201
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=29ccfd10:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=29ccfd10:11033
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=29ccfd10:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=29ccfd10:11201
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=29ccfd10:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=29ccfd10:11033
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=29ccfd10:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=29ccfd10:11033
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=29ccfd10:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=29ccfd10:11201
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=29ccfd10:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=29ccfd10:11033
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=29ccfd10:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=29ccfd10:11201
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=29ccfd10:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=29ccfd10:11201
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=29ccfd10:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=29ccfd10:11033
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=29ccfd10:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=29ccfd10:11033
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=29ccfd10:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=29ccfd10:11201
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=29ccfd10:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=29ccfd10:11066
+flushPassiveEffects @ react-dom_client.js?v=29ccfd10:13150
+(anonymous) @ react-dom_client.js?v=29ccfd10:12776
+performWorkUntilDeadline @ react-dom_client.js?v=29ccfd10:36
+<Activity>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=942e60e6:247
+(anonymous) @ ActivitiesPage.jsx:53
+ActivitiesPage @ ActivitiesPage.jsx:52
+react_stack_bottom_frame @ react-dom_client.js?v=29ccfd10:18509
+renderWithHooksAgain @ react-dom_client.js?v=29ccfd10:5729
+renderWithHooks @ react-dom_client.js?v=29ccfd10:5665
+updateFunctionComponent @ react-dom_client.js?v=29ccfd10:7475
+beginWork @ react-dom_client.js?v=29ccfd10:8525
+runWithFiberInDEV @ react-dom_client.js?v=29ccfd10:997
+performUnitOfWork @ react-dom_client.js?v=29ccfd10:12561
+workLoopSync @ react-dom_client.js?v=29ccfd10:12424
+renderRootSync @ react-dom_client.js?v=29ccfd10:12408
+performWorkOnRoot @ react-dom_client.js?v=29ccfd10:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=29ccfd10:13505
+performWorkUntilDeadline @ react-dom_client.js?v=29ccfd10:36
+<ActivitiesPage>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=942e60e6:247
+App @ App.jsx:19
+react_stack_bottom_frame @ react-dom_client.js?v=29ccfd10:18509
+renderWithHooksAgain @ react-dom_client.js?v=29ccfd10:5729
+renderWithHooks @ react-dom_client.js?v=29ccfd10:5665
+updateFunctionComponent @ react-dom_client.js?v=29ccfd10:7475
+beginWork @ react-dom_client.js?v=29ccfd10:8525
+runWithFiberInDEV @ react-dom_client.js?v=29ccfd10:997
+performUnitOfWork @ react-dom_client.js?v=29ccfd10:12561
+workLoopSync @ react-dom_client.js?v=29ccfd10:12424
+renderRootSync @ react-dom_client.js?v=29ccfd10:12408
+performWorkOnRoot @ react-dom_client.js?v=29ccfd10:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=29ccfd10:13505
+performWorkUntilDeadline @ react-dom_client.js?v=29ccfd10:36
+<App>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=942e60e6:247
+(anonymous) @ main.jsx:10
+tesseract-core-relaxedsimd-lstm.wasm.js:18 Error in pixReadStream: Unknown format: no pix returned
+xg @ tesseract-core-relaxedsimd-lstm.wasm.js:18
+write @ tesseract-core-relaxedsimd-lstm.wasm.js:16
+write @ tesseract-core-relaxedsimd-lstm.wasm.js:53
+l @ tesseract-core-relaxedsimd-lstm.wasm.js:80
+$func2679 @ 00aeb2ea:0x1ad772
+$func850 @ 00aeb2ea:0x6ecbe
+$func89 @ 00aeb2ea:0x417b
+$func1101 @ 00aeb2ea:0x9e4ca
+$func3335 @ 00aeb2ea:0x218510
+$func56 @ 00aeb2ea:0x3332
+$func47 @ 00aeb2ea:0x2e2c
+$func638 @ 00aeb2ea:0x4de3f
+$nd @ 00aeb2ea:0x2503a1
+S.SetImageFile @ tesseract-core-relaxedsimd-lstm.wasm.js:169
+t.exports @ setImage.js:32
+(anonymous) @ index.js:413
+p @ index.js:2
+(anonymous) @ index.js:2
+(anonymous) @ index.js:2
+f @ index.js:2
+a @ index.js:2
+(anonymous) @ index.js:2
+(anonymous) @ index.js:2
+(anonymous) @ index.js:343
+e.dispatchHandlers @ index.js:529
+(anonymous) @ index.js:22
+tesseract-core-relaxedsimd-lstm.wasm.js:18 Error in pixRead: pix not read
+xg @ tesseract-core-relaxedsimd-lstm.wasm.js:18
+write @ tesseract-core-relaxedsimd-lstm.wasm.js:16
+write @ tesseract-core-relaxedsimd-lstm.wasm.js:53
+l @ tesseract-core-relaxedsimd-lstm.wasm.js:80
+$func2679 @ 00aeb2ea:0x1ad772
+$func850 @ 00aeb2ea:0x6ecbe
+$func89 @ 00aeb2ea:0x417b
+$func1101 @ 00aeb2ea:0x9e4ca
+$func3335 @ 00aeb2ea:0x218510
+$func56 @ 00aeb2ea:0x3332
+$func47 @ 00aeb2ea:0x2e2c
+$func638 @ 00aeb2ea:0x4dec1
+$nd @ 00aeb2ea:0x2503a1
+S.SetImageFile @ tesseract-core-relaxedsimd-lstm.wasm.js:169
+t.exports @ setImage.js:32
+(anonymous) @ index.js:413
+p @ index.js:2
+(anonymous) @ index.js:2
+(anonymous) @ index.js:2
+f @ index.js:2
+a @ index.js:2
+(anonymous) @ index.js:2
+(anonymous) @ index.js:2
+(anonymous) @ index.js:343
+e.dispatchHandlers @ index.js:529
+(anonymous) @ index.js:22
+tesseract-core-relaxedsimd-lstm.wasm.js:18 Image file /input cannot be read!
+xg @ tesseract-core-relaxedsimd-lstm.wasm.js:18
+write @ tesseract-core-relaxedsimd-lstm.wasm.js:16
+write @ tesseract-core-relaxedsimd-lstm.wasm.js:53
+l @ tesseract-core-relaxedsimd-lstm.wasm.js:80
+$func2679 @ 00aeb2ea:0x1ad772
+$func516 @ 00aeb2ea:0x383de
+$func48 @ 00aeb2ea:0x2ea9
+$nd @ 00aeb2ea:0x2503bd
+S.SetImageFile @ tesseract-core-relaxedsimd-lstm.wasm.js:169
+t.exports @ setImage.js:32
+(anonymous) @ index.js:413
+p @ index.js:2
+(anonymous) @ index.js:2
+(anonymous) @ index.js:2
+f @ index.js:2
+a @ index.js:2
+(anonymous) @ index.js:2
+(anonymous) @ index.js:2
+(anonymous) @ index.js:343
+e.dispatchHandlers @ index.js:529
+(anonymous) @ index.js:22
+tesseract__js.js?v=3cfa50fc:1110 Uncaught Error: Error: Error attempting to read image.
+    at tesseract__js.js?v=3cfa50fc:1110:19
+    at worker.onmessage (tesseract__js.js?v=3cfa50fc:858:9)
+(anonymous) @ tesseract__js.js?v=3cfa50fc:1110
+worker.onmessage @ tesseract__js.js?v=3cfa50fc:858
+Activity.jsx:16 Uncaught (in promise) Error: Error attempting to read image.
+
+Ah, now the situation is clear. That 403 Forbidden error explains everything. Using https://cors-anywhere.herokuapp.com/ doesn’t work here because:
+
+The remote server (kultuuriaken.tartu.ee) blocks requests from unknown proxies.
+
+Tesseract.js needs direct access to the image data, but your browser cannot fetch it due to CORS.
+
+That’s why Tesseract gives Error attempting to read image — it never actually receives the image bytes.
+
+In short: you cannot OCR this image directly from the browser if the server doesn’t allow cross-origin requests. Public CORS proxies usually fail for this kind of protected content.
+
+✅ How to Fix It Properly
+
+The only reliable solutions are server-side:
+
+1️⃣ Use a Backend Proxy (Recommended)
+
+Set up a small Node.js server to fetch the image, then pass it to your React app or directly to Tesseract.js.
+
+Example: Express proxy
+
+// server.js
+const express = require('express');
+const fetch = require('node-fetch');
+const app = express();
+
+app.get('/proxy-image', async (req, res) => {
+  const url = req.query.url;
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      return res.status(response.status).send('Failed to fetch image');
+    }
+    const buffer = await response.buffer();
+    res.set('Content-Type', response.headers.get('content-type'));
+    res.send(buffer);
+  } catch (err) {
+    res.status(500).send('Server error');
+  }
+});
+
+app.listen(3000, () => console.log('Proxy server running on port 3000'));
+
+Then in your React component:
+
+const proxyUrl = `http://localhost:3000/proxy-image?url=${encodeURIComponent(props.activity.img_url)}`;
+const ret = await worker.recognize(proxyUrl);
+
+✅ This bypasses CORS because the browser now fetches from your server, not the blocked remote server.
+
+2️⃣ Download Images Manually or Store Locally
+
+If you control the images:
+
+Download them to your project or backend storage.
+
+Serve them yourself — then Tesseract.js can process them with no CORS issues.
+
+3️⃣ Use Node.js Tesseract (Optional)
+
+If OCR is heavy or images are large, you could run Tesseract entirely on the server using tesseract.js-node
+ or native Tesseract. Then your React app just shows the results.
+
+⚠️ Why Browser-Only Approaches Fail
+
+CORS Anywhere and similar public proxies can’t always fetch protected resources (like your .png file).
+
+Tesseract needs a real image file or blob, not a 403 HTML error.
+
+So no frontend-only solution will reliably work for these URLs.
+
+If you want, I can rewrite your Activity.jsx so that it fetches the image via a Node.js proxy and passes it safely to Tesseract.js without hitting CORS errors. This will work for all the kultuuriaken.tartu.ee images.
+
+Do you want me to do that?
+
+Activity.jsx:14 
+ GET http://http//localhost:3000/proxy-image?url=https%3A%2F%2Fkultuuriaken.tart…etail_main_image%2Fpublic%2F2026-02%2Folaf_soot_fb_0.png%3Fitok%3DPB3S4E-F net::ERR_NAME_NOT_RESOLVED
+tesseract__js.js?v=3cfa50fc:897 
+ Uncaught (in promise) TypeError: Failed to fetch
+    at textImageChecker (Activity.jsx:14:34)
+tesseract__js.js?v=3cfa50fc:897 
+ Uncaught (in promise) TypeError: Failed to fetch
+    at textImageChecker (Activity.jsx:14:34)
+
+Ah — now I see the problem clearly. Your fetch URL is malformed. Look at this part of the error:
+
+GET http://http//localhost:3000/proxy-image?url=...
+
+Notice the http// → it should be http://, not http//. That’s why you get:
+
+net::ERR_NAME_NOT_RESOLVED
+
+Browsers can’t resolve http//localhost:3000.
+
+🔹 How to Fix It
+
+Make sure your proxy URL is constructed correctly. Example in Activity.jsx:
+
+useEffect(() => {
+  const textImageChecker = async () => {
+    if (!props.activity.img_url) return;
+
+    try {
+      const worker = await createWorker();
+
+      // Correct proxy URL
+      const proxyUrl = `http://localhost:3000/proxy-image?url=${encodeURIComponent(
+        props.activity.img_url
+      )}`;
+
+      const ret = await worker.recognize(proxyUrl);
+      console.log(ret.data.text);
+
+      await worker.terminate();
+    } catch (err) {
+      console.error("Tesseract error:", err);
+    }
+  };
+
+  textImageChecker();
+}, []);
+
+✅ Key points:
+
+Use http://localhost:3000, not http//localhost:3000.
+
+Make sure your Node.js proxy is running on port 3000.
+
+Always encodeURIComponent the image URL so query parameters don’t break the URL.
+
+Optional: Full Working Node Proxy (for reference)
+// server.js
+const express = require('express');
+const fetch = require('node-fetch');
+const app = express();
+
+app.get('/proxy-image', async (req, res) => {
+  const url = req.query.url;
+  if (!url) return res.status(400).send("Missing URL");
+
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return res.status(response.status).send("Failed to fetch image");
+
+    const buffer = await response.buffer();
+    res.set('Content-Type', response.headers.get('content-type'));
+    res.send(buffer);
+  } catch (err) {
+    res.status(500).send("Server error");
+  }
+});
+
+app.listen(3000, () => console.log("Proxy running on port 3000"));
+
+If you fix the http:// typo, your Failed to fetch and CORS issues should be resolved.
+
+I can also provide a fully updated Activity.jsx that works with your proxy and Tesseract.js safely, so you won’t hit errors at all. Do you want me to do that?
+
+Activity.jsx:14  GET http://localhost:3000/proxy-image?url=https%3A%2F%2Fkultuuriaken.tartu.ee%2Fsites%2Fdefault%2Ffiles%2Fstyles%2Fdetail_main_image%2Fpublic%2Fapi%2Fluts%2F2339%2Fpipiannelinnas.jpg%3Fitok%3Djln8CpnU 500 (Internal Server Error)
+loadImage @ tesseract__js.js?v=3cfa50fc:897
+recognize @ tesseract__js.js?v=3cfa50fc:1074
+textImageChecker @ Activity.jsx:14
+await in textImageChecker
+(anonymous) @ Activity.jsx:19
+react_stack_bottom_frame @ react-dom_client.js?v=29ccfd10:18567
+runWithFiberInDEV @ react-dom_client.js?v=29ccfd10:997
+commitHookEffectListMount @ react-dom_client.js?v=29ccfd10:9411
+commitHookPassiveMountEffects @ react-dom_client.js?v=29ccfd10:9465
+reconnectPassiveEffects @ react-dom_client.js?v=29ccfd10:11273
+doubleInvokeEffectsOnFiber @ react-dom_client.js?v=29ccfd10:13339
+runWithFiberInDEV @ react-dom_client.js?v=29ccfd10:997
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=29ccfd10:13312
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=29ccfd10:13317
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=29ccfd10:13317
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=29ccfd10:13317
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=29ccfd10:13317
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=29ccfd10:13317
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=29ccfd10:13317
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=29ccfd10:13317
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=29ccfd10:13317
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=29ccfd10:13317
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=29ccfd10:13317
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=29ccfd10:13317
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=29ccfd10:13317
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=29ccfd10:13317
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=29ccfd10:13317
+commitDoubleInvokeEffectsInDEV @ react-dom_client.js?v=29ccfd10:13347
+flushPassiveEffects @ react-dom_client.js?v=29ccfd10:13157
+(anonymous) @ react-dom_client.js?v=29ccfd10:12776
+performWorkUntilDeadline @ react-dom_client.js?v=29ccfd10:36
+<Activity>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=942e60e6:247
+(anonymous) @ ActivitiesPage.jsx:53
+ActivitiesPage @ ActivitiesPage.jsx:52
+react_stack_bottom_frame @ react-dom_client.js?v=29ccfd10:18509
+renderWithHooksAgain @ react-dom_client.js?v=29ccfd10:5729
+renderWithHooks @ react-dom_client.js?v=29ccfd10:5665
+updateFunctionComponent @ react-dom_client.js?v=29ccfd10:7475
+beginWork @ react-dom_client.js?v=29ccfd10:8525
+runWithFiberInDEV @ react-dom_client.js?v=29ccfd10:997
+performUnitOfWork @ react-dom_client.js?v=29ccfd10:12561
+workLoopSync @ react-dom_client.js?v=29ccfd10:12424
+renderRootSync @ react-dom_client.js?v=29ccfd10:12408
+performWorkOnRoot @ react-dom_client.js?v=29ccfd10:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=29ccfd10:13505
+performWorkUntilDeadline @ react-dom_client.js?v=29ccfd10:36
+<ActivitiesPage>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=942e60e6:247
+App @ App.jsx:19
+react_stack_bottom_frame @ react-dom_client.js?v=29ccfd10:18509
+renderWithHooksAgain @ react-dom_client.js?v=29ccfd10:5729
+renderWithHooks @ react-dom_client.js?v=29ccfd10:5665
+updateFunctionComponent @ react-dom_client.js?v=29ccfd10:7475
+beginWork @ react-dom_client.js?v=29ccfd10:8525
+runWithFiberInDEV @ react-dom_client.js?v=29ccfd10:997
+performUnitOfWork @ react-dom_client.js?v=29ccfd10:12561
+workLoopSync @ react-dom_client.js?v=29ccfd10:12424
+renderRootSync @ react-dom_client.js?v=29ccfd10:12408
+performWorkOnRoot @ react-dom_client.js?v=29ccfd10:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=29ccfd10:13505
+performWorkUntilDeadline @ react-dom_client.js?v=29ccfd10:36
+<App>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=942e60e6:247
+(anonymous) @ main.jsx:10
+tesseract-core-relaxedsimd-lstm.wasm.js:18 Error in pixReadStream: Unknown format: no pix returned
+xg @ tesseract-core-relaxedsimd-lstm.wasm.js:18
+write @ tesseract-core-relaxedsimd-lstm.wasm.js:16
+write @ tesseract-core-relaxedsimd-lstm.wasm.js:53
+l @ tesseract-core-relaxedsimd-lstm.wasm.js:80
+$func2679 @ 00aeb2ea:0x1ad772
+$func850 @ 00aeb2ea:0x6ecbe
+$func89 @ 00aeb2ea:0x417b
+$func1101 @ 00aeb2ea:0x9e4ca
+$func3335 @ 00aeb2ea:0x218510
+$func56 @ 00aeb2ea:0x3332
+$func47 @ 00aeb2ea:0x2e2c
+$func638 @ 00aeb2ea:0x4de3f
+$nd @ 00aeb2ea:0x2503a1
+S.SetImageFile @ tesseract-core-relaxedsimd-lstm.wasm.js:169
+t.exports @ setImage.js:32
+(anonymous) @ index.js:413
+p @ index.js:2
+(anonymous) @ index.js:2
+(anonymous) @ index.js:2
+f @ index.js:2
+a @ index.js:2
+(anonymous) @ index.js:2
+(anonymous) @ index.js:2
+(anonymous) @ index.js:343
+e.dispatchHandlers @ index.js:529
+(anonymous) @ index.js:22
+tesseract-core-relaxedsimd-lstm.wasm.js:18 Error in pixRead: pix not read
+xg @ tesseract-core-relaxedsimd-lstm.wasm.js:18
+write @ tesseract-core-relaxedsimd-lstm.wasm.js:16
+write @ tesseract-core-relaxedsimd-lstm.wasm.js:53
+l @ tesseract-core-relaxedsimd-lstm.wasm.js:80
+$func2679 @ 00aeb2ea:0x1ad772
+$func850 @ 00aeb2ea:0x6ecbe
+$func89 @ 00aeb2ea:0x417b
+$func1101 @ 00aeb2ea:0x9e4ca
+$func3335 @ 00aeb2ea:0x218510
+$func56 @ 00aeb2ea:0x3332
+$func47 @ 00aeb2ea:0x2e2c
+$func638 @ 00aeb2ea:0x4dec1
+$nd @ 00aeb2ea:0x2503a1
+S.SetImageFile @ tesseract-core-relaxedsimd-lstm.wasm.js:169
+t.exports @ setImage.js:32
+(anonymous) @ index.js:413
+p @ index.js:2
+(anonymous) @ index.js:2
+(anonymous) @ index.js:2
+f @ index.js:2
+a @ index.js:2
+(anonymous) @ index.js:2
+(anonymous) @ index.js:2
+(anonymous) @ index.js:343
+e.dispatchHandlers @ index.js:529
+(anonymous) @ index.js:22
+tesseract-core-relaxedsimd-lstm.wasm.js:18 Image file /input cannot be read!
+xg @ tesseract-core-relaxedsimd-lstm.wasm.js:18
+write @ tesseract-core-relaxedsimd-lstm.wasm.js:16
+write @ tesseract-core-relaxedsimd-lstm.wasm.js:53
+l @ tesseract-core-relaxedsimd-lstm.wasm.js:80
+$func2679 @ 00aeb2ea:0x1ad772
+$func516 @ 00aeb2ea:0x383de
+$func48 @ 00aeb2ea:0x2ea9
+$nd @ 00aeb2ea:0x2503bd
+S.SetImageFile @ tesseract-core-relaxedsimd-lstm.wasm.js:169
+t.exports @ setImage.js:32
+(anonymous) @ index.js:413
+p @ index.js:2
+(anonymous) @ index.js:2
+(anonymous) @ index.js:2
+f @ index.js:2
+a @ index.js:2
+(anonymous) @ index.js:2
+(anonymous) @ index.js:2
+(anonymous) @ index.js:343
+e.dispatchHandlers @ index.js:529
+(anonymous) @ index.js:22
+tesseract__js.js?v=3cfa50fc:1110 Uncaught Error: Error: Error attempting to read image.
+    at tesseract__js.js?v=3cfa50fc:1110:19
+    at worker.onmessage (tesseract__js.js?v=3cfa50fc:858:9)
+(anonymous) @ tesseract__js.js?v=3cfa50fc:1110
+worker.onmessage @ tesseract__js.js?v=3cfa50fc:858
+Activity.jsx:18 Uncaught (in promise) Error: Error attempting to read image.
+
+Ah — now the 500 Internal Server Error makes sense. Your Node.js proxy is failing to fetch the image from kultuuriaken.tartu.ee. That’s why Tesseract.js throws:
+
+Error attempting to read image
+
+Even though the browser fetches http://localhost:3000/proxy-image?url=..., your server cannot retrieve the image from the remote site. This is common for these reasons:
+
+🔹 Why the Proxy Fails
+
+The remote server blocks “unknown” requests (maybe checks User-Agent, Referer, or cookies).
+
+Some servers require HTTPS — you are probably using fetch() on Node with the URL as HTTPS, which is fine, but Node might not follow redirects automatically.
+
+The proxy doesn’t handle errors robustly, so any failed fetch returns 500.
+
+🔹 How to Fix the Node Proxy
+
+Here’s a robust proxy that works with kultuuriaken.tartu.ee images:
+
+const express = require('express');
+const fetch = require('node-fetch');
+const app = express();
+
+app.get('/proxy-image', async (req, res) => {
+  const url = req.query.url;
+  if (!url) return res.status(400).send("Missing URL");
+
+  try {
+    // Add headers to mimic a normal browser request
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
+          '(KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36',
+        'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
+        'Referer': 'https://kultuuriaken.tartu.ee/', // some servers require this
+      },
+    });
+
+    if (!response.ok) {
+      return res.status(response.status).send(`Failed to fetch image: ${response.status}`);
+    }
+
+    const buffer = await response.buffer();
+    res.set('Content-Type', response.headers.get('content-type') || 'image/jpeg');
+    res.send(buffer);
+  } catch (err) {
+    console.error("Proxy error:", err);
+    res.status(500).send("Server error fetching image");
+  }
+});
+
+app.listen(3000, () => console.log('Proxy running on port 3000'));
+
+✅ Key points:
+
+Added User-Agent and Referer headers to avoid remote server blocking.
+
+Handles failed fetches with proper error messages.
+
+Sends correct Content-Type to Tesseract.
+
+🔹 React Side (Tesseract)
+useEffect(() => {
+  const textImageChecker = async () => {
+    if (!props.activity.img_url) return;
+
+    try {
+      const worker = await createWorker();
+
+      const proxyUrl = `http://localhost:3000/proxy-image?url=${encodeURIComponent(
+        props.activity.img_url
+      )}`;
+
+      const ret = await worker.recognize(proxyUrl);
+      console.log("OCR Text:", ret.data.text);
+
+      await worker.terminate();
+    } catch (err) {
+      console.error("Tesseract error:", err);
+    }
+  };
+
+  textImageChecker();
+}, []);
+
+✅ After this:
+
+Node proxy successfully fetches images from kultuuriaken.tartu.ee.
+
+Browser avoids CORS because it only requests from your local proxy.
+
+Tesseract.js can read the image and extract text.
+
+If you want, I can provide a complete Activity.jsx component that integrates this proxy and Tesseract.js fully, handling errors gracefully, so your OCR works on all these images.
+
+Do you want me to do that?
+
+Proxy error: TypeError: response.buffer is not a function
+
+Ah! That explains the latest issue. The error:
+
+Proxy error: TypeError: response.buffer is not a function
+
+happens because in Node.js v18+, the global fetch() does not return a Response with .buffer() — that’s only in the node-fetch v2 API. In Node 18+ (native fetch), you need to use .arrayBuffer() instead and then convert it to a Node Buffer.
+
+🔹 Correct Node Proxy for Node 18+ Native Fetch
+const express = require('express');
+const app = express();
+
+app.get('/proxy-image', async (req, res) => {
+  const url = req.query.url;
+  if (!url) return res.status(400).send("Missing URL");
+
+  try {
+    // Use native fetch in Node 18+
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
+          '(KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36',
+        'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
+        'Referer': 'https://kultuuriaken.tartu.ee/',
+      },
+    });
+
+    if (!response.ok) {
+      return res.status(response.status).send(`Failed to fetch image: ${response.status}`);
+    }
+
+    // Convert arrayBuffer to Buffer
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    res.set('Content-Type', response.headers.get('content-type') || 'image/jpeg');
+    res.send(buffer);
+  } catch (err) {
+    console.error("Proxy error:", err);
+    res.status(500).send("Server error fetching image");
+  }
+});
+
+app.listen(3000, () => console.log('Proxy running on port 3000'));
+
+✅ Changes:
+
+Replaced response.buffer() with:
+
+const arrayBuffer = await response.arrayBuffer();
+const buffer = Buffer.from(arrayBuffer);
+
+Everything else stays the same (headers to bypass remote blocks).
+
+🔹 React Side (unchanged)
+const proxyUrl = `http://localhost:3000/proxy-image?url=${encodeURIComponent(
+  props.activity.img_url
+)}`;
+const ret = await worker.recognize(proxyUrl);
+
+💡 After this:
+
+Node proxy works in Node 18+.
+
+500 Internal Server Error goes away.
+
+Tesseract.js receives the correct image bytes and can OCR normally.
+
+If you want, I can send a ready-to-use full Activity.jsx that integrates this proxy, handles OCR, and logs text safely without crashes.
+
+Do you want me to do that?

@@ -17,8 +17,8 @@ function Header() {
         <Link to="/activities" className="p1 text-darkbrown">
           Activities
         </Link>
-        <Link to="/art" className="p1 text-darkbrown">
-          Art
+        <Link to="/auth" className="p1 text-darkbrown">
+          Login
         </Link>
       </nav>
     </header>

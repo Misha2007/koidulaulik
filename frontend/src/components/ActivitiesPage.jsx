@@ -47,11 +47,13 @@ function ActivitiesPage() {
           <h1 className="h1 text-4xl font-bold text-lightbrown">Activities</h1>
           {/* <p className="text-lg mb-8">Explore our exciting activities!</p> */}
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 m-4 overflow-y-auto h-[60lvh]">
-          {activities &&
-            activities.map((activ) => (
-              <Activity key={activ.id} isPinned={true} activity={activ} />
-            ))}
+        <div class="h-[60vh] overflow-y-auto">
+          <div className="columns-3 gap-8 m-4">
+            {activities &&
+              activities.map((activ) => (
+                <Activity key={activ.id} isPinned={true} activity={activ} />
+              ))}
+          </div>
         </div>
       </div>
     </div>
