@@ -1,39 +1,93 @@
 import React, { useState } from "react";
 import Login from "./Login";
 
+const { VITE_API_URL } = import.meta.env;
+
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
 
   const [error, setError] = useState();
 
-  const fetchData = async () => {
-    try {
-      const response = await fetch(`${VITE_API_URL}login`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        const errorMessage = await response.text();
+  const addUserHandler = (user) => {
+    const addUser = async (user) => {
+      try {
+        console.log(JSON.stringify(user));
+        const response = await fetch(`${VITE_API_URL}user/new-user`, {
+          method: "POST",
+          body: JSON.stringify(user),
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+        const data = await response.json();
+        console.log("Response Data:", data.accessToken);
+        localStorage.setItem("authToken", data.accessToken);
+        if (!response.ok) {
+          const errorMessage = await response.text();
+          setError({
+            title: "Problems with backend",
+            message: errorMessage || "Invalid email or password.",
+          });
+          return;
+        }
+        navigate("/account");
+      } catch (error) {
+        console.log(error);
         setError({
-          title: "Problems with backend",
-          message: errorMessage || "Invalid email or password.",
+          title: "Server Unreachable",
+          message: "Failed to add user, please try again later.",
         });
         return;
       }
-
-      console.log(data);
-    } catch (error) {
-      console.log(error);
-      setError({
-        title: "Server Unreachable",
-        message: "Failed to add user, please try again later.",
-      });
-      return;
-    }
+    };
+    addUser(user);
   };
+
+  const loginUserHandler = (user) => {
+    const getUser = async (user) => {
+      try {
+        const response = await fetch(`${REACT_APP_API_URL}user/login`, {
+          method: "POST",
+          body: JSON.stringify(user),
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+        const data = await response.json();
+        localStorage.setItem("authToken", data.accessToken);
+
+        if (!response.ok) {
+          const errorMessage = await response.text();
+          console.log(errorMessage);
+
+          setError({
+            title: "An error occurred",
+            message: errorMessage || "Invalid email or password.",
+          });
+          return;
+        }
+        navigate("/account");
+      } catch (error) {
+        console.log(error);
+        setError({
+          title: "Server Unreachable",
+          message: "Failed to add user, please try again later.",
+        });
+      }
+    };
+    getUser(user);
+  };
+
+  useState(() => {
+    setToken(localStorage.getItem("authToken"));
+    return null;
+  }, []);
+
+  useEffect(() => {
+    if (token) {
+      navigate("/account");
+    }
+  }, [token, navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-white">
@@ -44,7 +98,7 @@ export default function Auth() {
         </div>
 
         {isLogin ? (
-          <Login />
+          <Login onLoginUser={loginUserHandler} />
         ) : (
           <form className="space-y-4">
             <div>
