@@ -42,14 +42,10 @@ for div in soup.find_all('div', class_='col'):
         event_soup = BeautifulSoup(driver.page_source, "html.parser")
 
         img_url = None
-        image_div = event_soup.find("div", class_="image")
+        image_div = event_soup.select_one(".gallery-wrapper img")
 
-        if image_div and image_div.get("style"):
-            style = image_div["style"]
-            match = re.search(r"url\(['\"]?(.*?)['\"]?\)", style)
-            
-            if match:
-                img_url = match.group(1)
+        if image_div and image_div.get("src"):
+            img_url = image_div["src"]
 
         # Coordinates
         scripts = event_soup.find_all("script")
